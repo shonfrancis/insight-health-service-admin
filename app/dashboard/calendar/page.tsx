@@ -358,7 +358,7 @@ export default function CalendarMatrix() {
                                 Time
                             </div>
                             {filteredStaff.map((member) => (
-                                <div key={member.id} className="flex flex-1 min-w-[220px] flex-col items-center justify-center border-r border-black/[.15] py-4 last:border-r-0 dark:border-white/[.22]">
+                                <div key={member.id} className="flex flex-1 min-w-[220px] flex-col items-center justify-center border-r border-black/[.15] py-4 dark:border-white/[.22]">
                                     <span className="text-sm font-semibold text-foreground">{member.name}</span>
                                     <span className="text-xs text-foreground/50">{member.role}</span>
                                 </div>
@@ -406,7 +406,7 @@ export default function CalendarMatrix() {
                                     });
 
                                     return (
-                                        <div key={`lane-${member.id}`} className="relative flex-1 min-w-[220px] border-r border-black/[.15] last:border-r-0 dark:border-white/[.22]">
+                                        <div key={`lane-${member.id}`} className="relative flex-1 min-w-[220px] border-r border-black/[.15] dark:border-white/[.22]">
 
                                             {memberAppointments.length === 0 && (
                                                 <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">

@@ -49,6 +49,7 @@ interface StaffMember {
     unavailableDates?: string[];
     isActive: boolean; // System Account Access (Granted vs Revoked)
     isAvailable: boolean; // Clinician Booking Availability (Available vs Unavailable)
+    maxSlotsPerDay?: number | null; // Max patient bookings per day (null = unlimited)
 }
 
 import { apiClient } from "@/lib/api-client";
@@ -78,7 +79,8 @@ export default function StaffManagement() {
                         contact: { email: s.email, phone: s.phone || 'N/A' },
                         schedule: { days: 'Mon - Fri', hours: '08:30 - 17:30' },
                         isActive: s.status === 'active',
-                        isAvailable: s.availability !== 'unavailable'
+                        isAvailable: s.availability !== 'unavailable',
+                        maxSlotsPerDay: s.max_slots_per_day ?? 10
                     })));
                 }
             })
@@ -114,6 +116,7 @@ export default function StaffManagement() {
     const [addPhone, setAddPhone] = useState("");
     const [addRole, setAddRole] = useState<"administrator" | "clinician" | "reception" | "super_admin">("administrator");
     const [addSpecialization, setAddSpecialization] = useState("");
+    const [addMaxSlots, setAddMaxSlots] = useState("10");
     const [isSubmittingAdd, setIsSubmittingAdd] = useState(false);
 
     const modalFilteredStaff = useMemo(() => {
@@ -232,7 +235,8 @@ export default function StaffManagement() {
                     specialization: selectedStaff.qualifications,
                     role: backendRole,
                     status: selectedStaff.isActive ? 'active' : 'inactive',
-                    availability: selectedStaff.isAvailable ? 'available' : 'unavailable'
+                    availability: selectedStaff.isAvailable ? 'available' : 'unavailable',
+                    max_slots_per_day: selectedStaff.maxSlotsPerDay ?? 10
                 })
             });
 
@@ -248,6 +252,10 @@ export default function StaffManagement() {
     const handleCreateStaff = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmittingAdd(true);
+        // Daily slot cap: blank / invalid → default 10
+        const dailySlots = addMaxSlots && Number(addMaxSlots) >= 1
+            ? Math.min(500, Math.round(Number(addMaxSlots)))
+            : 10;
         try {
             const res = await apiClient('/staff', {
                 method: 'POST',
@@ -259,6 +267,7 @@ export default function StaffManagement() {
                     role: addRole,
                     specialization: addSpecialization || 'Healthcare Specialist',
                     availability: 'available',
+                    max_slots_per_day: dailySlots,
                 })
             });
 
@@ -272,6 +281,7 @@ export default function StaffManagement() {
                 schedule: { days: 'Mon - Fri', hours: '08:30 - 17:30' },
                 isActive: true,
                 isAvailable: true,
+                maxSlotsPerDay: dailySlots,
             };
 
             setStaffList([newMember, ...staffList]);
@@ -282,6 +292,7 @@ export default function StaffManagement() {
             setAddEmail("");
             setAddPhone("");
             setAddSpecialization("");
+            setAddMaxSlots("10");
         } catch (err: any) {
             toast.error("Failed to Create Staff", err.message || "Failed to create staff record.");
         } finally {
@@ -462,6 +473,9 @@ export default function StaffManagement() {
                                                     }`}>
                                                         <span className={`h-2 w-2 rounded-full ${staff.isAvailable ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
                                                         {staff.isAvailable ? "Available for Booking" : "Unavailable (No Bookings)"}
+                                                        {staff.isAvailable ? (
+                                                            <span className="font-normal text-foreground/50">· {staff.maxSlotsPerDay ?? 10}/day</span>
+                                                        ) : null}
                                                     </span>
                                                 ) : (
                                                     <span className="text-xs text-foreground/40 italic">N/A (Non-Clinical)</span>
@@ -575,6 +589,41 @@ export default function StaffManagement() {
                                         {selectedStaff.isAvailable ? "Available for Patient Bookings" : "Unavailable (No New Bookings Allowed)"}
                                     </span>
                                 </p>
+
+                                {/* Daily booking slot limit */}
+                                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-blue-500/20 bg-white/70 px-3 py-2.5 dark:bg-zinc-900/50">
+                                    <div className="flex items-start gap-2.5 min-w-0">
+                                        <CalendarClock className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
+                                        <div>
+                                            <p className="text-xs font-semibold text-blue-900 dark:text-blue-200">Max slots per day</p>
+                                            <p className="text-[11px] text-blue-800/70 dark:text-blue-300/70">Maximum patient bookings this clinician can accept per day.</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="number"
+                                            required
+                                            min={1}
+                                            max={500}
+                                            value={selectedStaff.maxSlotsPerDay ?? ""}
+                                            onChange={(e) => {
+                                                const v = e.target.value;
+                                                setSelectedStaff({
+                                                    ...selectedStaff,
+                                                    maxSlotsPerDay: v === "" ? null : Math.min(500, Math.max(1, Math.round(Number(v))))
+                                                });
+                                            }}
+                                            onBlur={() => {
+                                                setSelectedStaff(prev => (prev && !prev.maxSlotsPerDay ? { ...prev, maxSlotsPerDay: 10 } : prev));
+                                            }}
+                                            title="Max patient bookings per day"
+                                            className="h-9 w-20 rounded-md border border-black/[.15] bg-white dark:bg-zinc-900 px-2 text-center text-sm font-semibold text-foreground focus:border-[#3C43EC] focus:outline-none dark:border-white/[.22]"
+                                        />
+                                        <span className="inline-flex items-center whitespace-nowrap rounded-md bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
+                                            {selectedStaff.maxSlotsPerDay ?? 10} / day
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                         )}
 
@@ -900,6 +949,33 @@ export default function StaffManagement() {
                             />
                         </div>
                     </div>
+
+                    {addRole === 'clinician' && (
+                        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-500/20 bg-blue-50/50 p-3 dark:bg-blue-950/20">
+                            <div className="flex items-start gap-2.5 min-w-0">
+                                <CalendarClock className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
+                                <div>
+                                    <p className="text-xs font-semibold text-blue-900 dark:text-blue-200">Max slots per day</p>
+                                    <p className="text-[11px] text-blue-800/70 dark:text-blue-300/70">Maximum patient bookings this clinician can accept per day.</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="number"
+                                    required
+                                    min={1}
+                                    max={500}
+                                    value={addMaxSlots}
+                                    onChange={(e) => setAddMaxSlots(e.target.value)}
+                                    title="Max patient bookings per day"
+                                    className="h-9 w-20 rounded-md border border-black/[.15] bg-white dark:bg-zinc-900 px-2 text-center text-sm font-semibold text-foreground focus:border-[#3C43EC] focus:outline-none dark:border-white/[.22]"
+                                />
+                                <span className="inline-flex items-center whitespace-nowrap rounded-md bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
+                                    {addMaxSlots && Number(addMaxSlots) >= 1 ? `${Math.min(500, Math.round(Number(addMaxSlots)))} / day` : "10 / day"}
+                                </span>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="flex justify-end gap-3 pt-4 border-t border-black/10 dark:border-white/10">
                         <Button

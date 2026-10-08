@@ -6,6 +6,7 @@ import { Search, ChevronRight, CheckCircle2, ChevronLeft, Calendar as CalendarIc
 import Link from "next/link";
 import { apiClient } from "@/lib/api-client";
 import { useToast } from "@/components/ui/toast";
+import DatePickerField from "@/components/ui/date-picker";
 
 const servicesData = [
     { id: "s1", category: "Pregnancy Scans", name: "Early Pregnancy Scan", price: 80, duration: "30 mins", description: "Confirm viability and date the pregnancy (6-14 weeks).", prep: "Full bladder required.", clinicians: ["Dr. Sarah Jenkins", "Dr. Marcus Thorne", "Dr. Emily Chen"] },
@@ -905,12 +906,12 @@ export default function NewAppointmentPage() {
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                                     <div>
                                         <label className="mb-1.5 block text-sm font-semibold text-foreground/80">Date of Birth</label>
-                                        <input
-                                            type="date"
+                                        <DatePickerField
                                             value={patientInfo.dob}
-                                            onChange={(e) => setPatientInfo({ ...patientInfo, dob: e.target.value })}
+                                            onChange={(v) => setPatientInfo({ ...patientInfo, dob: v })}
                                             disabled={patientType === "existing"}
-                                            className="h-10 w-full rounded-md border border-black/[.15] bg-white dark:bg-zinc-900 px-3 text-sm text-foreground focus:border-blue-600 focus:outline-none dark:border-white/[.22] disabled:opacity-60"
+                                            maxDate={new Date()}
+                                            placeholder="Select date of birth"
                                         />
                                     </div>
                                     <div>
