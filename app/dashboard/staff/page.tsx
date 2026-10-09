@@ -119,6 +119,11 @@ export default function StaffManagement() {
     const [addMaxSlots, setAddMaxSlots] = useState("10");
     const [isSubmittingAdd, setIsSubmittingAdd] = useState(false);
 
+    // Reset Password State
+    const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
+    const [resetPasswordValue, setResetPasswordValue] = useState("");
+    const [isResettingPassword, setIsResettingPassword] = useState(false);
+
     const modalFilteredStaff = useMemo(() => {
         return staffList.filter(s => {
             const matchesSearch = s.name.toLowerCase().includes(modalSearchQuery.toLowerCase());
@@ -297,6 +302,27 @@ export default function StaffManagement() {
             toast.error("Failed to Create Staff", err.message || "Failed to create staff record.");
         } finally {
             setIsSubmittingAdd(false);
+        }
+    };
+
+    const handleResetPassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedStaff) return;
+        setIsResettingPassword(true);
+        try {
+            await apiClient(`/staff/${selectedStaff.id}/reset-password`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    password: resetPasswordValue
+                })
+            });
+            toast.success("Password Reset", `Password for ${selectedStaff.name} has been reset successfully.`);
+            setShowResetPasswordModal(false);
+            setResetPasswordValue("");
+        } catch (err: any) {
+            toast.error("Failed to Reset Password", err.message || "Failed to reset password.");
+        } finally {
+            setIsResettingPassword(false);
         }
     };
 
@@ -787,6 +813,15 @@ export default function StaffManagement() {
 
                     {/* Action Footer */}
                     <div className="mt-auto flex items-center justify-end gap-3 border-t border-black/[.15] dark:border-white/[.22] pt-6">
+                        {userRole === "super_admin" && (
+                            <Button
+                                variant="outline"
+                                onClick={() => setShowResetPasswordModal(true)}
+                                className="text-amber-600 border-amber-200 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-900 dark:hover:bg-amber-950/40 mr-auto"
+                            >
+                                Reset Password
+                            </Button>
+                        )}
                         <Button
                             variant="filled"
                             onClick={handleSaveProfile}
@@ -991,6 +1026,47 @@ export default function StaffManagement() {
                             loading={isSubmittingAdd}
                         >
                             Create Staff Member
+                        </Button>
+                    </div>
+                </form>
+            </Modal>
+
+            {/* Reset Password Modal */}
+            <Modal
+                isOpen={showResetPasswordModal}
+                onClose={() => setShowResetPasswordModal(false)}
+                title="Reset Password"
+                description={`Set a new password for ${selectedStaff?.name}.`}
+                maxWidth="sm"
+            >
+                <form onSubmit={handleResetPassword} className="space-y-4">
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-foreground">New Password *</label>
+                        <input
+                            type="password"
+                            required
+                            minLength={6}
+                            value={resetPasswordValue}
+                            onChange={(e) => setResetPasswordValue(e.target.value)}
+                            placeholder="Enter new password (min 6 chars)"
+                            className="h-10 w-full rounded-md border border-black/[.15] bg-white dark:bg-zinc-900 px-3 text-sm text-foreground focus:border-[#3C43EC] focus:outline-none dark:border-white/[.22]"
+                        />
+                    </div>
+                    <div className="flex justify-end gap-3 pt-4 border-t border-black/10 dark:border-white/10">
+                        <Button
+                            variant="outline"
+                            type="button"
+                            onClick={() => setShowResetPasswordModal(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="filled"
+                            type="submit"
+                            loading={isResettingPassword}
+                            className="bg-amber-600 hover:bg-amber-700 text-white"
+                        >
+                            Confirm Reset
                         </Button>
                     </div>
                 </form>

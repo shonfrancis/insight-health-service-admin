@@ -75,23 +75,15 @@ export default function DashboardLayout({
         }
 
         setUserRole(storedRole);
+    }, [router]);
 
-        // Check if current role is authorized to view this route
-        const allowedRoutes = roleAllowedRoutes[storedRole] || [];
-        const isAuthorized = allowedRoutes.some(route => pathname.startsWith(route));
-
-        if (!isAuthorized) {
-            console.warn(`Unauthorized route access for role [${storedRole}]: ${pathname}`);
-            if (storedRole === "clinician") {
-                router.push("/dashboard/schedule");
-            } else {
-                router.push("/dashboard/overview");
-            }
-        }
-    }, [pathname, router]);
-
+    // Give a default render so children are always rendered (prevents Next.js hook errors)
     if (!userRole) {
-        return null;
+        return (
+            <div className="flex h-screen w-full items-center justify-center bg-slate-50 dark:bg-black/60">
+                <div className="text-sm font-medium">Loading Dashboard...</div>
+            </div>
+        );
     }
 
     return (
